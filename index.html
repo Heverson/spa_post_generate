@@ -661,6 +661,7 @@
 
     // Aceita:
     // - { suggestions: [...] }
+    // - [{ output: { suggestions: [...] } }]  <- NOVO: estrutura do webhook atual
     // - [{ json: { suggestions: [...] } }]
     // - [{ suggestions: [...] }]
     // - [...] (array direto de objetos com title/link/source)
@@ -675,6 +676,11 @@
       // Array topo
       if (Array.isArray(payload)) {
         for (const el of payload) {
+          // NOVO: estrutura específica do webhook atual
+          if (el && el.output && Array.isArray(el.output.suggestions)) {
+            const arr = el.output.suggestions.map(normalizeSuggestionItem).filter(Boolean);
+            if (arr.length) return arr;
+          }
           if (el && Array.isArray(el.suggestions)) {
             const arr = el.suggestions.map(normalizeSuggestionItem).filter(Boolean);
             if (arr.length) return arr;
@@ -699,7 +705,7 @@
 
       // Objeto genérico
       if (payload && typeof payload === 'object') {
-        const candidates = ['data','body','result','payload','value','json'];
+        const candidates = ['data','body','result','payload','value','json','output'];
         for (const k of candidates) {
           const node = payload[k];
           if (node && Array.isArray(node.suggestions)) {
