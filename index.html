@@ -293,14 +293,6 @@
     const QUOTA_PER_WEEK = 2; // limite cliente
 
     /* fallback local (se Step 1 falhar) */
-    const DEFAULT_SUGGESTIONS = [
-      { title: 'Como reduzir riscos na importação de produtos dos EUA' },
-      { title: 'Checklist de documentos para importação pessoa física' },
-      { title: 'Diferenças entre courier e encomenda postal na importação' },
-      { title: 'Passo a passo: tributação e códigos NCM essenciais' },
-      { title: 'Erros comuns que encarecem a importação e como evitar' }
-    ];
-
     /* =========================
        MOCK DATA & FUNCTIONS
     ========================== */
@@ -741,12 +733,14 @@
 
         renderSuggestionsObjects(suggestions);
       } catch (err) {
-        console.warn('Falha ao buscar sugestões (usando fallback):', err);
-        const fallback = DEFAULT_SUGGESTIONS.map(s => ({
-          title: typeof s === 'string' ? s : s.title,
-          link:  '#'
-        }));
-        renderSuggestionsObjects(fallback);
+        console.error('Falha ao buscar sugestões:', err);
+        elSuggestions.innerHTML = `
+          <div class="col-span-full text-center py-8">
+            <div class="text-red-600 text-sm mb-2">❌ Erro ao carregar sugestões</div>
+            <p class="text-slate-500 text-xs">Verifique se o webhook está funcionando corretamente.</p>
+            <p class="text-slate-400 text-xs mt-1">Erro: ${err.message}</p>
+          </div>
+        `;
       }
     }
 
