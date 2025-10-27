@@ -1,0 +1,1140 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Importação Segura — Gerador de Posts</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Froala Editor -->
+  <link href="https://cdn.jsdelivr.net/npm/froala-editor@latest/css/froala_editor.pkgd.min.css" rel="stylesheet" type="text/css" />
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/froala-editor@latest/js/froala_editor.pkgd.min.js"></script>
+  <script>
+    /* Paleta roxa */
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50:  '#f5f3ff',
+              100: '#ede9fe',
+              200: '#ddd6fe',
+              300: '#c4b5fd',
+              400: '#a78bfa',
+              500: '#8b5cf6',
+              600: '#7c3aed',
+              700: '#6d28d9',
+              800: '#5b21b6',
+              900: '#4c1d95',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="icon" href="data:," />
+
+  <style>
+    /* spinner minimalista */
+    .spinner:after {
+      content: "";
+      width: 1.25rem; height: 1.25rem;
+      border: 3px solid #ffffff;
+      border-bottom-color: transparent;
+      border-radius: 9999px;
+      display: inline-block;
+      animation: spin 700ms linear infinite;
+      vertical-align: middle;
+      margin-left: .5rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* esconder input file */
+    input[type="file"] { display: none; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+  <!-- Shell -->
+  <div class="min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="border-b border-slate-200 bg-white/80 backdrop-blur">
+      <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="h-9 w-9 rounded-xl bg-brand-500 flex items-center justify-center text-white font-bold">IS</div>
+          <div>
+            <h1 class="text-lg font-semibold leading-none">Importação Segura</h1>
+            <p class="text-xs text-slate-500 leading-tight">
+              Gerador de Posts (Netlify SPA)
+              <span id="mockIndicator" class="ml-2 px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-xs font-medium hidden">MOCK</span>
+            </p>
+          </div>
+        </div>
+        <a href="/" class="text-sm text-slate-500 hover:text-slate-700">Voltar ao site</a>
+      </div>
+    </header>
+
+    <!-- Main -->
+    <main class="flex-1">
+      <div class="max-w-5xl mx-auto px-4 py-8">
+
+        <!-- Stepper -->
+        <ol class="grid grid-cols-3 gap-2 mb-6">
+          <li class="step-item col-span-1 flex items-center gap-3">
+            <div id="bullet-1" class="h-8 w-8 rounded-full flex items-center justify-center text-white bg-brand-500">1</div>
+            <div>
+              <p class="text-sm font-semibold">Etapa 1</p>
+              <p class="text-xs text-slate-500">Escolha o tema</p>
+            </div>
+          </li>
+          <li class="step-item col-span-1 flex items-center gap-3">
+            <div id="bullet-2" class="h-8 w-8 rounded-full flex items-center justify-center bg-slate-200 text-slate-600">2</div>
+            <div>
+              <p class="text-sm font-semibold">Etapa 2</p>
+              <p class="text-xs text-slate-500">Edite & confirme</p>
+            </div>
+          </li>
+          <li class="step-item col-span-1 flex items-center gap-3">
+            <div id="bullet-3" class="h-8 w-8 rounded-full flex items-center justify-center bg-slate-200 text-slate-600">3</div>
+            <div>
+              <p class="text-sm font-semibold">Etapa 3</p>
+              <p class="text-xs text-slate-500">Post publicado</p>
+            </div>
+          </li>
+        </ol>
+
+        <!-- Aviso limite -->
+        <div id="quotaBanner" class="mb-6 hidden rounded-xl border border-amber-200 bg-amber-50 text-amber-900 px-4 py-3">
+          <p class="text-sm">
+            Você pode usar <strong>até 2 posts por semana</strong>.
+            <span id="quotaCount"></span>
+          </p>
+        </div>
+
+        <!-- Card -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <!-- Content wrapper -->
+          <div class="p-6 md:p-8">
+            <!-- Step 1 -->
+            <div id="step-1" class="space-y-6">
+              <header class="space-y-2">
+                <h2 class="text-xl md:text-2xl font-semibold">Escolha um tema para o seu post</h2>
+                <p class="text-slate-600 text-sm">Selecione uma das sugestões abaixo ou escreva seu próprio tema.</p>
+              </header>
+
+              <!-- Sugestões -->
+              <div id="suggestions" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+              <!-- Tema custom -->
+              <div class="mt-2">
+                <label for="customTheme" class="block text-sm font-medium text-slate-700 mb-1">Ou sugira um tema</label>
+                <div class="flex gap-2">
+                  <input id="customTheme" type="text" placeholder="Ex.: Guia prático para importar com segurança dos EUA"
+                         class="flex-1 rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400" />
+                  <button id="btnUseCustom"
+                          class="px-4 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm">
+                    Usar este tema
+                  </button>
+                </div>
+                <p class="text-xs text-slate-500 mt-1">Dica: seja específico (mercado, país, produto, nível de experiência).</p>
+              </div>
+
+              <!-- CTA -->
+              <div class="pt-2 flex items-center gap-3">
+                <button id="btnGenerate"
+                        class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-medium shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
+                  Gerar rascunho
+                </button>
+                <span id="genStatus" class="text-sm text-slate-500" aria-live="polite"></span>
+              </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div id="step-2" class="hidden space-y-6">
+              <header class="space-y-2">
+                <h2 class="text-xl md:text-2xl font-semibold">Revise e edite seu post</h2>
+                <p class="text-slate-600 text-sm">Ajuste os campos abaixo. Você pode trocar a imagem.</p>
+              </header>
+
+              <!-- Form -->
+              <form id="editForm" class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium mb-1" for="title">Título</label>
+                  <input id="title" name="title" type="text" required
+                         class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400" />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium mb-1" for="description">Descrição</label>
+                  <textarea id="description" name="description" rows="2" required
+                            class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400"></textarea>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium mb-1" for="excerpt">Excerpt (resumo curto)</label>
+                  <textarea id="excerpt" name="excerpt" rows="2"
+                            class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400"></textarea>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium mb-1" for="content">Conteúdo</label>
+                  <textarea id="content" name="content" required></textarea>
+                </div>
+
+                <!-- Imagem -->
+                <div class="grid md:grid-cols-2 gap-4">
+                  <div class="space-y-2">
+                    <label class="block text-sm font-medium">Imagem do post</label>
+                    <div class="rounded-xl border border-slate-200 p-3 flex items-center gap-3">
+                      <img id="imgPreview" src="" alt="Prévia" class="h-20 w-20 object-cover rounded-lg bg-slate-100" />
+                      <div class="flex-1">
+                        <input id="imageUrl" type="url" placeholder="URL da imagem"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400" />
+                        <div class="flex items-center gap-2">
+                          <label for="imageFile"
+                                 class="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4-4 4 4 8-8M14 16h6v6h-6z"/></svg>
+                            Enviar arquivo
+                          </label>
+                          <input id="imageFile" type="file" accept="image/*" />
+                          <button id="btnApplyImage" type="button"
+                                  class="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-sm hover:bg-slate-800">
+                            Aplicar imagem
+                          </button>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-1">Você pode colar uma URL ou enviar um arquivo (será enviado em Base64).</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Preview do conteúdo -->
+                  <div class="space-y-2">
+                    <label class="block text-sm font-medium">Prévia rápida</label>
+                    <div id="contentPreview" class="rounded-xl border border-slate-200 p-4 prose prose-slate max-w-none text-sm">
+                      <p class="text-slate-500">A prévia aparecerá aqui após editar o conteúdo.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Ações -->
+                <div class="pt-2 flex items-center gap-3">
+                  <button id="btnPublish" type="submit"
+                          class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-medium shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
+                    Publicar no WordPress
+                  </button>
+                  <span id="pubStatus" class="text-sm text-slate-500" aria-live="polite"></span>
+                </div>
+              </form>
+            </div>
+
+            <!-- Step 3 -->
+            <div id="step-3" class="hidden space-y-6 text-center">
+              <header class="space-y-2">
+                <div class="mx-auto h-12 w-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  ✓
+                </div>
+                <h2 class="text-xl md:text-2xl font-semibold">Seu post foi publicado!</h2>
+                <p class="text-slate-600 text-sm">Acesse o link abaixo para visualizar.</p>
+              </header>
+
+              <div class="max-w-xl mx-auto">
+                <a id="finalLink" href="#" target="_blank" rel="noopener"
+                   class="block truncate rounded-xl border border-slate-200 px-4 py-3 bg-slate-50 hover:bg-slate-100 text-brand-700 font-medium">
+                  Abrir post publicado
+                </a>
+                <div class="mt-3 flex items-center justify-center gap-3">
+                  <button id="btnCopyLink"
+                          class="px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm">
+                    Copiar link
+                  </button>
+                  <button id="btnCreateAnother"
+                          class="px-3 py-1.5 rounded-lg bg-brand-600 text-white hover:bg-brand-700 text-sm">
+                    Criar outro post
+                  </button>
+                </div>
+                <p id="quotaAfter" class="mt-2 text-xs text-slate-500"></p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Toast -->
+        <div id="toast" class="fixed left-1/2 -translate-x-1/2 bottom-6 hidden">
+          <div class="rounded-xl bg-slate-900 text-white px-4 py-2 shadow-lg text-sm"></div>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-200 bg-white">
+      <div class="max-w-5xl mx-auto px-4 py-6 text-xs text-slate-500 flex items-center justify-between">
+        <span>© <span id="year"></span> Importação Segura</span>
+        <span>Limite: 2 posts/semana • Horário local: América/São_Paulo</span>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    /* =========================
+       CONFIG
+    ========================== */
+    /* MODO MOCK - ativar para simular APIs */
+    const MOCK_MODE = true; // mude para false para usar APIs reais
+    
+    /* Etapa 1: sugestões (GET) */
+    const API_SUGGESTIONS = MOCK_MODE ? 'mock://suggestions' : 'https://primary-production-5b64.up.railway.app/webhook-test/post-ideias';
+    /* Etapa 2: gerar rascunho a partir do tema */
+    const API_GENERATE    = MOCK_MODE ? 'mock://generate' : 'https://primary-production-5b64.up.railway.app/webhook-test/post-generate';
+    /* Etapa 3: submeter/publicar no WP e retornar { postUrl } */
+    const API_SUBMIT      = MOCK_MODE ? 'mock://submit' : 'https://primary-production-5b64.up.railway.app/webhook-test/post-submit';
+
+    const QUOTA_PER_WEEK = 2; // limite cliente
+
+    /* fallback local (se Step 1 falhar) */
+    const DEFAULT_SUGGESTIONS = [
+      { title: 'Como reduzir riscos na importação de produtos dos EUA' },
+      { title: 'Checklist de documentos para importação pessoa física' },
+      { title: 'Diferenças entre courier e encomenda postal na importação' },
+      { title: 'Passo a passo: tributação e códigos NCM essenciais' },
+      { title: 'Erros comuns que encarecem a importação e como evitar' }
+    ];
+
+    /* =========================
+       MOCK DATA & FUNCTIONS
+    ========================== */
+    const MOCK_SUGGESTIONS = [
+      {
+        title: 'Como reduzir riscos na importação de produtos dos EUA',
+        link: 'https://importacaosegura.com/guia-reduzir-riscos-eua',
+        source: {
+          name: 'Importação Segura',
+          url: 'https://importacaosegura.com'
+        }
+      },
+      {
+        title: 'Checklist completo de documentos para importação pessoa física',
+        link: 'https://importacaosegura.com/checklist-documentos-pf',
+        source: {
+          name: 'Guia Prático',
+          url: 'https://importacaosegura.com/guias'
+        }
+      },
+      {
+        title: 'Diferenças entre courier e encomenda postal na importação',
+        link: 'https://importacaosegura.com/courier-vs-postal',
+        source: {
+          name: 'Comparativo',
+          url: 'https://importacaosegura.com/comparativos'
+        }
+      },
+      {
+        title: 'Passo a passo: tributação e códigos NCM essenciais',
+        link: 'https://importacaosegura.com/tributacao-ncm',
+        source: {
+          name: 'Fiscal',
+          url: 'https://importacaosegura.com/fiscal'
+        }
+      },
+      {
+        title: 'Erros comuns que encarecem a importação e como evitar',
+        link: 'https://importacaosegura.com/erros-comuns-importacao',
+        source: {
+          name: 'Dicas',
+          url: 'https://importacaosegura.com/dicas'
+        }
+      }
+    ];
+
+    function generateMockDraft(topic) {
+      const templates = [
+        {
+          title: `Guia Completo: ${topic}`,
+          description: `Descubra tudo que você precisa saber sobre ${topic.toLowerCase()}. Um guia prático e detalhado para importadores.`,
+          excerpt: `Aprenda as melhores práticas e evite erros comuns em ${topic.toLowerCase()}.`,
+          content: `
+            <h2>Introdução</h2>
+            <p>Quando se trata de <strong>${topic.toLowerCase()}</strong>, muitos importadores cometem erros que podem custar caro. Neste guia completo, vamos abordar os principais aspectos que você precisa conhecer.</p>
+            
+            <h2>Principais Pontos de Atenção</h2>
+            <ul>
+              <li><strong>Documentação:</strong> Certifique-se de ter todos os documentos necessários</li>
+              <li><strong>Prazos:</strong> Respeite os prazos estabelecidos pelas autoridades</li>
+              <li><strong>Valores:</strong> Declare valores corretos para evitar problemas</li>
+              <li><strong>Produtos:</strong> Verifique se o produto pode ser importado</li>
+            </ul>
+            
+            <h2>Dicas Práticas</h2>
+            <p>Para ter sucesso em <strong>${topic.toLowerCase()}</strong>, é fundamental:</p>
+            <ol>
+              <li>Fazer uma pesquisa prévia sobre o produto</li>
+              <li>Consultar a legislação vigente</li>
+              <li>Buscar orientação profissional quando necessário</li>
+              <li>Manter-se atualizado sobre mudanças na legislação</li>
+            </ol>
+            
+            <h2>Conclusão</h2>
+            <p>Seguindo essas diretrizes, você estará mais preparado para lidar com <strong>${topic.toLowerCase()}</strong> de forma eficiente e segura.</p>
+          `,
+          imageUrl: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&h=400&fit=crop'
+        },
+        {
+          title: `Tudo Sobre ${topic}`,
+          description: `Conheça os detalhes importantes sobre ${topic.toLowerCase()} e como isso afeta sua importação.`,
+          excerpt: `Informações essenciais sobre ${topic.toLowerCase()} para importadores.`,
+          content: `
+            <h2>O que é ${topic}?</h2>
+            <p><strong>${topic}</strong> é um aspecto fundamental no processo de importação que merece atenção especial.</p>
+            
+            <h2>Como Funciona</h2>
+            <p>O processo envolve várias etapas importantes:</p>
+            <ul>
+              <li>Análise inicial dos requisitos</li>
+              <li>Preparação da documentação</li>
+              <li>Submissão às autoridades competentes</li>
+              <li>Acompanhamento do processo</li>
+            </ul>
+            
+            <h2>Benefícios</h2>
+            <p>Quando realizado corretamente, <strong>${topic.toLowerCase()}</strong> oferece:</p>
+            <ul>
+              <li>Maior segurança no processo</li>
+              <li>Redução de riscos</li>
+              <li>Economia de tempo e recursos</li>
+              <li>Conformidade legal</li>
+            </ul>
+            
+            <h2>Considerações Finais</h2>
+            <p>É importante sempre buscar informações atualizadas e, quando necessário, consultar profissionais especializados para garantir o sucesso de sua importação.</p>
+          `,
+          imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=400&fit=crop'
+        }
+      ];
+      
+      const template = templates[Math.floor(Math.random() * templates.length)];
+      return {
+        ...template,
+        title: template.title.replace('${topic}', topic),
+        description: template.description.replace('${topic}', topic),
+        excerpt: template.excerpt.replace('${topic}', topic),
+        content: template.content.replace(/\$\{topic\}/g, topic)
+      };
+    }
+
+    function generateMockPostUrl() {
+      const slug = 'post-importacao-' + Date.now();
+      return `https://importacaosegura.com/blog/${slug}`;
+    }
+
+    // Interceptar fetch para modo mock
+    const originalFetch = window.fetch;
+    window.fetch = async function(url, options = {}) {
+      if (!MOCK_MODE || !url.startsWith('mock://')) {
+        return originalFetch(url, options);
+      }
+
+      // Simular delay de rede
+      await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200));
+
+      const mockUrl = url.replace('mock://', '');
+      
+      switch (mockUrl) {
+        case 'suggestions':
+          return new Response(JSON.stringify({
+            suggestions: MOCK_SUGGESTIONS,
+            generated_at: new Date().toISOString()
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+
+        case 'generate':
+          const body = options.body ? JSON.parse(options.body) : {};
+          const topic = body.topic || 'importação';
+          const draft = generateMockDraft(topic);
+          
+          return new Response(JSON.stringify(draft), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+
+        case 'submit':
+          const postUrl = generateMockPostUrl();
+          return new Response(JSON.stringify({
+            postUrl: postUrl,
+            postId: 'mock-' + Date.now(),
+            slug: postUrl.split('/').pop()
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+
+        default:
+          return new Response(JSON.stringify({ error: 'Mock endpoint not found' }), {
+            status: 404,
+            headers: { 'Content-Type': 'application/json' }
+          });
+      }
+    };
+
+    /* =========================
+       JSON SCHEMAS (para Etapa 2/3)
+    ========================== */
+    const SCHEMA_GENERATE = {
+      type: "object",
+      properties: {
+        title:       { type: "string" },
+        description: { type: "string" },
+        excerpt:     { type: "string" },
+        content:     { type: "string" },
+        imageUrl:    { type: "string" }
+      },
+      required: ["title", "content"],
+      additionalProperties: false
+    };
+
+    const SCHEMA_SUBMIT = {
+      type: "object",
+      properties: {
+        postUrl: { type: "string" },
+        postId:  { type: "string" },
+        slug:    { type: "string" }
+      },
+      required: ["postUrl"],
+      additionalProperties: false
+    };
+
+    /* =========================
+       STATE
+    ========================== */
+    const state = {
+      step: 1,
+      topic: '',
+      draft: {
+        title: '',
+        description: '',
+        excerpt: '',
+        content: '',
+        imageUrl: '',
+        imageBase64: ''
+      },
+      postUrl: ''
+    };
+
+    /* =========================
+       QUOTA (2/semana)
+    ========================== */
+    function startOfWeek(date = new Date()) {
+      const d = new Date(date);
+      d.setHours(0,0,0,0);
+      const day = d.getDay(); // 0=domingo
+      const diff = (day === 0 ? -6 : 1) - day;
+      d.setDate(d.getDate() + diff);
+      return d;
+    }
+    function endOfWeek(date = new Date()) {
+      const s = startOfWeek(date);
+      const e = new Date(s);
+      e.setDate(s.getDate() + 7);
+      e.setMilliseconds(-1);
+      return e;
+    }
+    function getQuotaUsed() {
+      const raw = localStorage.getItem('isg_posts') || '[]';
+      const arr = JSON.parse(raw);
+      const s = startOfWeek().getTime(), e = endOfWeek().getTime();
+      return arr.filter(ts => ts >= s && ts <= e).length;
+    }
+    function incQuota() {
+      const raw = localStorage.getItem('isg_posts') || '[]';
+      const arr = JSON.parse(raw);
+      arr.push(Date.now());
+      localStorage.setItem('isg_posts', JSON.stringify(arr));
+    }
+    function updateQuotaBanner() {
+      const used = getQuotaUsed();
+      const el = document.getElementById('quotaBanner');
+      const span = document.getElementById('quotaCount');
+      span.textContent = `(${used}/${QUOTA_PER_WEEK} nesta semana)`;
+      el.classList.toggle('hidden', false);
+      const btn = document.getElementById('btnGenerate');
+      btn.disabled = used >= QUOTA_PER_WEEK;
+    }
+
+    /* =========================
+       Helpers básicos
+    ========================== */
+    function toast(msg) {
+      const box = elToast.firstElementChild;
+      box.textContent = msg;
+      elToast.classList.remove('hidden');
+      setTimeout(() => elToast.classList.add('hidden'), 2200);
+    }
+     function setStep(n) {
+      state.step = n;
+      elStep1.classList.toggle('hidden', n !== 1);
+      elStep2.classList.toggle('hidden', n !== 2);
+      elStep3.classList.toggle('hidden', n !== 3);
+
+      elBullet1.className = 'h-8 w-8 rounded-full flex items-center justify-center ' + (n >= 1 ? 'bg-brand-500 text-white' : 'bg-slate-200 text-slate-600');
+      elBullet2.className = 'h-8 w-8 rounded-full flex items-center justify-center ' + (n >= 2 ? 'bg-brand-500 text-white' : 'bg-slate-200 text-slate-600');
+      elBullet3.className = 'h-8 w-8 rounded-full flex items-center justify-center ' + (n >= 3 ? 'bg-brand-500 text-white' : 'bg-slate-200 text-slate-600');
+      
+      // Inicializar Froala Editor quando entrar na etapa 2
+      if (n === 2) {
+        setTimeout(() => initFroalaEditor(), 300);
+      }
+    }
+    function setLoading(btnEl, statusEl, isLoading, textIdle = '', textLoading = 'Processando…') {
+      btnEl.disabled = isLoading;
+      statusEl.textContent = isLoading ? textLoading : textIdle;
+      btnEl.classList.toggle('spinner', isLoading);
+    }
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+    function canCreateMoreThisWeek() {
+      return getQuotaUsed() < QUOTA_PER_WEEK;
+    }
+
+    /* =========================
+       Etapa 1 — render e parsing robusto (n8n/obj/array)
+    ========================== */
+    function suggestionCardObj(item) {
+      const id = 'sug-' + btoa(unescape(encodeURIComponent(item.title))).slice(0,10);
+
+      const linkLine = item.link
+        ? `<p class="text-xs mt-2">
+             <a class="text-brand-600 hover:text-brand-700 underline break-all"
+                href="${item.link}" target="_blank" rel="noopener">link do tema</a>
+           </p>`
+        : '';
+
+      const sourceLine = item.source && (item.source.name || item.source.url)
+        ? `<p class="text-xs text-slate-500 mt-1">
+             ${item.source.name ? `${item.source.name}` : ''}
+             ${item.source.name && item.source.url ? ' • ' : ''}
+             ${item.source.url ? `<a class="text-brand-600 hover:text-brand-700 underline"
+                                    href="${item.source.url}" target="_blank" rel="noopener">fonte</a>` : ''}
+           </p>`
+        : '';
+
+      return `
+        <label for="${id}" class="block cursor-pointer group">
+          <input id="${id}" type="radio" name="suggestion"
+                 value="${item.title.replace(/"/g,'&quot;')}" class="peer hidden" />
+          <div class="rounded-xl border border-slate-200 bg-white p-4
+                      group-hover:border-brand-300 peer-checked:border-brand-500
+                      peer-checked:ring-2 peer-checked:ring-brand-200">
+            <p class="text-sm font-medium text-slate-800">${item.title}</p>
+            ${linkLine}
+            ${sourceLine}
+          </div>
+        </label>
+      `;
+    }
+
+    function renderSuggestionsObjects(list) {
+      const max = 5;
+      const items = (list || []).slice(0, max);
+      elSuggestions.innerHTML = items.map(suggestionCardObj).join('');
+    }
+
+    function isValidSuggestionItem(x) {
+      return x && typeof x === 'object'
+          && typeof x.title === 'string' && x.title.trim().length > 0
+          && typeof x.link  === 'string' && x.link.trim().length  > 0;
+    }
+
+    function normalizeSuggestionItem(x) {
+      if (!x || typeof x !== 'object') return null;
+      const title = typeof x.title === 'string' ? x.title.trim() : '';
+      const link  = typeof x.link  === 'string' ? x.link.trim()  : '';
+      const src = x.source && (x.source.name || x.source.url)
+        ? {
+            name: typeof x.source.name === 'string' ? x.source.name : undefined,
+            url:  typeof x.source.url  === 'string' ? x.source.url  : undefined
+          }
+        : undefined;
+      const item = { title, link };
+      if (src) item.source = src;
+      return isValidSuggestionItem(item) ? item : null;
+    }
+
+    // Aceita:
+    // - { suggestions: [...] }
+    // - [{ json: { suggestions: [...] } }]
+    // - [{ suggestions: [...] }]
+    // - [...] (array direto de objetos com title/link/source)
+    function extractSuggestions(payload) {
+      if (!payload) return [];
+
+      // Caso ideal
+      if (payload && Array.isArray(payload.suggestions)) {
+        return payload.suggestions.map(normalizeSuggestionItem).filter(Boolean);
+      }
+
+      // Array topo
+      if (Array.isArray(payload)) {
+        for (const el of payload) {
+          if (el && Array.isArray(el.suggestions)) {
+            const arr = el.suggestions.map(normalizeSuggestionItem).filter(Boolean);
+            if (arr.length) return arr;
+          }
+          if (el && el.json && Array.isArray(el.json.suggestions)) {
+            const arr = el.json.suggestions.map(normalizeSuggestionItem).filter(Boolean);
+            if (arr.length) return arr;
+          }
+          const candidates = ['data','body','result','payload','value'];
+          for (const k of candidates) {
+            if (el && el[k] && Array.isArray(el[k].suggestions)) {
+              const arr = el[k].suggestions.map(normalizeSuggestionItem).filter(Boolean);
+              if (arr.length) return arr;
+            }
+          }
+        }
+        // Array direto de itens
+        const arrDirect = payload.map(normalizeSuggestionItem).filter(Boolean);
+        if (arrDirect.length) return arrDirect;
+        return [];
+      }
+
+      // Objeto genérico
+      if (payload && typeof payload === 'object') {
+        const candidates = ['data','body','result','payload','value','json'];
+        for (const k of candidates) {
+          const node = payload[k];
+          if (node && Array.isArray(node.suggestions)) {
+            const arr = node.suggestions.map(normalizeSuggestionItem).filter(Boolean);
+            if (arr.length) return arr;
+          }
+          if (node && typeof node === 'object') {
+            const arr = extractSuggestions(node);
+            if (arr.length) return arr;
+          }
+        }
+      }
+
+      return [];
+    }
+
+    async function loadSuggestionsFromAPI() {
+      elSuggestions.innerHTML = `<div class="text-sm text-slate-500">Carregando sugestões…</div>`;
+      try {
+        const res = await fetch(API_SUGGESTIONS, { method: 'GET', cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+
+        const ct = (res.headers.get('content-type') || '').toLowerCase();
+        let payload = ct.includes('application/json') ? await res.json() : await res.text();
+        if (typeof payload === 'string') { try { payload = JSON.parse(payload); } catch {} }
+
+        const suggestions = extractSuggestions(payload);
+        if (!suggestions.length) {
+          throw new Error('Nenhuma sugestão válida encontrada no payload.');
+        }
+
+        renderSuggestionsObjects(suggestions);
+      } catch (err) {
+        console.warn('Falha ao buscar sugestões (usando fallback):', err);
+        const fallback = DEFAULT_SUGGESTIONS.map(s => ({
+          title: typeof s === 'string' ? s : s.title,
+          link:  '#'
+        }));
+        renderSuggestionsObjects(fallback);
+      }
+    }
+
+    /* =========================
+       Etapa 2 → gerar rascunho (topic → draft)
+    ========================== */
+    function validateSchema(data, schema) {
+      function isObject(v){ return v !== null && typeof v === 'object' && !Array.isArray(v); }
+      function isType(v, t){
+        if (t === 'object') return isObject(v);
+        if (t === 'array')  return Array.isArray(v);
+        return typeof v === t;
+      }
+      if (!isType(data, schema.type)) return false;
+
+      if (schema.type === 'object') {
+        const props = schema.properties || {};
+        const req = schema.required || [];
+        for (const k of req) if (!(k in data)) return false;
+        for (const [key, subSchema] of Object.entries(props)) {
+          if (data[key] === undefined) continue;
+          if (subSchema.type && !validateSchema(data[key], subSchema)) return false;
+        }
+        return true;
+      }
+      if (schema.type === 'array') {
+        const itemSchema = schema.items;
+        if (!itemSchema) return true;
+        for (const item of data) {
+          if (!validateSchema(item, itemSchema)) return false;
+        }
+        return true;
+      }
+      return true;
+    }
+
+    async function requestDraftFromTheme(topic) {
+      const attempts = [
+        () => fetch(API_GENERATE, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic })
+        }),
+        () => fetch(API_GENERATE, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ topic })
+        }),
+        () => fetch(`${API_GENERATE}?topic=${encodeURIComponent(topic)}`, { method: 'GET' })
+      ];
+      let lastErr, data;
+      for (const attempt of attempts) {
+        try {
+          const res = await attempt();
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const ct = (res.headers.get('content-type') || '').toLowerCase();
+          data = ct.includes('application/json') ? await res.json() : await res.text();
+          if (typeof data === 'string') { try { data = JSON.parse(data); } catch {} }
+          if (validateSchema(data, SCHEMA_GENERATE)) return data;
+          const mapped = mapToGenerateShape(data, topic);
+          if (validateSchema(mapped, SCHEMA_GENERATE)) return mapped;
+          throw new Error('Payload Etapa 2 inválido');
+        } catch (e) { lastErr = e; }
+      }
+      throw lastErr || new Error('Falha ao obter rascunho');
+    }
+
+    function mapToGenerateShape(raw, topic) {
+      if (!raw || typeof raw !== 'object') {
+        return { title: `Post sobre: ${topic}`, content: `<p>Conteúdo gerado para <strong>${topic}</strong>.</p>` };
+      }
+      const get = (o, p) => p.split('.').reduce((x,k)=>x && x[k], raw);
+      const pick = (...keys) => {
+        for (const k of keys) {
+          const v = k.includes('.') ? get(raw, k) : raw[k];
+          if (v) return String(v);
+        }
+        return '';
+      };
+      return {
+        title:       pick('title','post.title','data.title') || `Post sobre: ${topic}`,
+        description: pick('description','desc','meta.description') || '',
+        excerpt:     pick('excerpt','summary') || '',
+        content:     pick('content','html','post.content') || `<p>Conteúdo gerado para <strong>${topic}</strong>.</p>`,
+        imageUrl:    pick('imageUrl','image','cover') || ''
+      };
+    }
+
+     function renderDraftToForm() {
+      elTitle.value = state.draft.title || '';
+      elDescription.value = state.draft.description || '';
+      elExcerpt.value = state.draft.excerpt || '';
+      
+      // Definir conteúdo no Froala Editor se já estiver inicializado
+      if (froalaEditor) {
+        froalaEditor.html.set(state.draft.content || '');
+      } else {
+        elContent.value = state.draft.content || '';
+      }
+      
+      if (state.draft.imageBase64) {
+        elImgPreview.src = state.draft.imageBase64;
+      } else {
+        elImgPreview.src = state.draft.imageUrl || '';
+      }
+      elImageUrl.value = state.draft.imageUrl || '';
+      updateContentPreview();
+    }
+     function updateContentPreview() {
+      // Obter conteúdo do Froala Editor se disponível, senão do textarea
+      let html;
+      if (froalaEditor) {
+        html = froalaEditor.html.get();
+      } else {
+        html = elContent.value.trim();
+      }
+      elContentPreview.innerHTML = html ? html : '<p class="text-slate-500">A prévia aparecerá aqui após editar o conteúdo.</p>';
+    }
+
+    function collectSelectedTopic() {
+      const checked = document.querySelector('input[name="suggestion"]:checked');
+      let topic = checked ? checked.value : '';
+      const custom = elCustomTheme.value.trim();
+      if (custom) topic = custom;
+      return topic;
+    }
+
+    /* =========================
+       INIT
+    ========================== */
+    const elSuggestions = document.getElementById('suggestions');
+    const elGenStatus = document.getElementById('genStatus');
+    const elBtnGenerate = document.getElementById('btnGenerate');
+    const elCustomTheme = document.getElementById('customTheme');
+    const elBtnUseCustom = document.getElementById('btnUseCustom');
+    const elBullet1 = document.getElementById('bullet-1');
+    const elBullet2 = document.getElementById('bullet-2');
+    const elBullet3 = document.getElementById('bullet-3');
+
+    const elStep1 = document.getElementById('step-1');
+    const elStep2 = document.getElementById('step-2');
+    const elStep3 = document.getElementById('step-3');
+
+    const elEditForm = document.getElementById('editForm');
+    const elTitle = document.getElementById('title');
+    const elDescription = document.getElementById('description');
+    const elExcerpt = document.getElementById('excerpt');
+    const elContent = document.getElementById('content');
+    const elContentPreview = document.getElementById('contentPreview');
+    const elImgPreview = document.getElementById('imgPreview');
+    const elImageUrl = document.getElementById('imageUrl');
+    const elImageFile = document.getElementById('imageFile');
+    const elBtnApplyImage = document.getElementById('btnApplyImage');
+    const elBtnPublish = document.getElementById('btnPublish');
+    const elPubStatus = document.getElementById('pubStatus');
+
+    const elFinalLink = document.getElementById('finalLink');
+    const elBtnCopyLink = document.getElementById('btnCopyLink');
+    const elBtnCreateAnother = document.getElementById('btnCreateAnother');
+    const elQuotaAfter = document.getElementById('quotaAfter');
+
+    const elToast = document.getElementById('toast');
+
+    document.getElementById('year').textContent = new Date().getFullYear();
+    
+    // Mostrar indicador de modo mock
+    if (MOCK_MODE) {
+      document.getElementById('mockIndicator').classList.remove('hidden');
+    }
+    
+    // Inicializar Froala Editor
+    let froalaEditor = null;
+    function initFroalaEditor() {
+      if (froalaEditor) return;
+      
+      froalaEditor = new FroalaEditor('#content', {
+        height: 400,
+        toolbarButtons: {
+          'moreText': {
+            'buttons': ['bold', 'italic', 'underline', 'strikeThrough', 'subscript', 'superscript', 'fontFamily', 'fontSize', 'textColor', 'backgroundColor', 'inlineClass', 'inlineStyle', 'clearFormatting']
+          },
+          'moreParagraph': {
+            'buttons': ['alignLeft', 'alignCenter', 'formatOLSimple', 'formatUL', 'paragraphFormat', 'paragraphStyle', 'lineHeight', 'outdent', 'indent', 'quote']
+          },
+          'moreRich': {
+            'buttons': ['insertLink', 'insertImage', 'insertVideo', 'insertTable', 'emoticons', 'fontAwesome', 'specialCharacters', 'embedly', 'insertFile', 'insertHR']
+          },
+          'moreMisc': {
+            'buttons': ['undo', 'redo', 'fullscreen', 'print', 'getPDF', 'spellChecker', 'selectAll', 'html', 'help']
+          }
+        },
+        pluginsEnabled: ['align', 'charCounter', 'codeBeautifier', 'codeView', 'colors', 'draggable', 'emoticons', 'entities', 'file', 'fontFamily', 'fontSize', 'forms', 'fullscreen', 'image', 'imageManager', 'inlineStyle', 'lineBreaker', 'link', 'lists', 'paragraphFormat', 'paragraphStyle', 'quickInsert', 'quote', 'save', 'table', 'url', 'video', 'wordPaste'],
+        imageUploadURL: false,
+        imageUploadParams: {},
+        imageManagerLoadURL: false,
+        videoUploadURL: false,
+        fileUploadURL: false,
+        charCounterCount: true,
+        charCounterMax: 10000,
+        placeholderText: 'Digite o conteúdo do seu post aqui...',
+        theme: 'royal',
+        language: 'pt_br',
+        events: {
+          'contentChanged': function() {
+            updateContentPreview();
+          }
+        }
+      });
+    }
+    
+    updateQuotaBanner();
+    loadSuggestionsFromAPI();
+
+    if (location.search.includes('reset=1')) {
+      localStorage.removeItem('isg_posts');
+      updateQuotaBanner();
+      toast('Quota resetada localmente.');
+    }
+
+    /* =========================
+       EVENTS
+    ========================== */
+    document.getElementById('btnUseCustom').addEventListener('click', () => {
+      if (!elCustomTheme.value.trim()) return toast('Digite um tema no campo de sugestão.');
+      document.querySelectorAll('input[name="suggestion"]').forEach(r => (r.checked = false));
+      toast('Tema personalizado selecionado.');
+    });
+
+    // Etapa 1 -> Etapa 2
+    elBtnGenerate.addEventListener('click', async () => {
+      if (!canCreateMoreThisWeek()) {
+        toast('Limite semanal atingido (2/semana).');
+        return;
+      }
+      const topic = collectSelectedTopic();
+      if (!topic) return toast('Escolha uma sugestão ou escreva um tema.');
+
+      state.topic = topic;
+      setLoading(elBtnGenerate, elGenStatus, true, '', 'Gerando rascunho…');
+
+      try {
+        const data = await requestDraftFromTheme(topic);
+
+        state.draft.title = data.title;
+        state.draft.description = data.description || '';
+        state.draft.excerpt = data.excerpt || '';
+        state.draft.content = data.content;
+        state.draft.imageUrl = data.imageUrl || '';
+        state.draft.imageBase64 = '';
+
+        renderDraftToForm();
+        setStep(2);
+      } catch (err) {
+        console.error(err);
+        toast('Erro ao gerar rascunho. Verifique a Etapa 2 (CORS/método).');
+      } finally {
+        setLoading(elBtnGenerate, elGenStatus, false);
+      }
+    });
+
+    // Preview conteúdo - Froala Editor já tem evento configurado
+
+    // Imagem
+    elBtnApplyImage.addEventListener('click', async () => {
+      const url = elImageUrl.value.trim();
+      const file = elImageFile.files[0];
+
+      if (!url && !file) {
+        toast('Informe uma URL ou selecione um arquivo de imagem.');
+        return;
+      }
+      if (file) {
+        try {
+          const b64 = await fileToBase64(file);
+          state.draft.imageBase64 = b64;
+          state.draft.imageUrl = '';
+          elImgPreview.src = b64;
+          elImageUrl.value = '';
+          toast('Imagem aplicada via arquivo.');
+          return;
+        } catch (e) {
+          toast('Falha ao ler o arquivo.');
+          return;
+        }
+      }
+      state.draft.imageUrl = url;
+      state.draft.imageBase64 = '';
+      elImgPreview.src = url;
+      toast('Imagem aplicada via URL.');
+    });
+
+    /* =========================
+       Etapa 3 → publicar/submeter
+    ========================== */
+    elEditForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!canCreateMoreThisWeek()) {
+        toast('Limite semanal atingido (2/semana).');
+        return;
+      }
+      // Obter conteúdo do Froala Editor
+      let content;
+      if (froalaEditor) {
+        content = froalaEditor.html.get();
+      } else {
+        content = elContent.value.trim();
+      }
+      
+      const payload = {
+        title: elTitle.value.trim(),
+        description: elDescription.value.trim(),
+        excerpt: elExcerpt.value.trim(),
+        content: content,
+        imageUrl: state.draft.imageUrl || '',
+        imageBase64: state.draft.imageBase64 || '',
+        topic: state.topic,
+        source: 'netlify-spa'
+      };
+
+      if (!payload.title || !payload.content) {
+        toast('Título e conteúdo são obrigatórios.');
+        return;
+      }
+
+      setLoading(elBtnPublish, elPubStatus, true, '', 'Publicando no WordPress…');
+      try {
+        const attempts = [
+          () => fetch(API_SUBMIT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          }),
+          () => fetch(API_SUBMIT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams(Object.entries(payload))
+          })
+        ];
+        let res, ok = false, data;
+        for (const a of attempts) {
+          try {
+            res = await a();
+            if (!res.ok) continue;
+            const ct = (res.headers.get('content-type') || '').toLowerCase();
+            data = ct.includes('application/json') ? await res.json() : await res.text();
+            if (typeof data === 'string') { try { data = JSON.parse(data); } catch {} }
+            if (validateSchema(data, SCHEMA_SUBMIT)) { ok = true; break; }
+          } catch {}
+        }
+        if (!ok) throw new Error('Falha ao publicar (schema inválido)');
+
+        state.postUrl = data.postUrl;
+
+        incQuota();
+        updateQuotaBanner();
+
+        elFinalLink.href = state.postUrl;
+        elFinalLink.textContent = state.postUrl;
+        elQuotaAfter.textContent = `Uso nesta semana: ${getQuotaUsed()}/${QUOTA_PER_WEEK}.`;
+        setStep(3);
+      } catch (err) {
+        console.error(err);
+        toast('Erro ao publicar. Verifique a Etapa 3 (CORS/URL).');
+      } finally {
+        setLoading(elBtnPublish, elPubStatus, false);
+      }
+    });
+
+    // Copiar / novo
+    document.getElementById('btnCopyLink').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(state.postUrl);
+        toast('Link copiado!');
+      } catch { toast('Não foi possível copiar.'); }
+    });
+
+    document.getElementById('btnCreateAnother').addEventListener('click', () => {
+      if (!canCreateMoreThisWeek()) {
+        toast('Limite semanal atingido (2/semana).');
+        return;
+      }
+      state.topic = '';
+      state.draft = { title: '', description: '', excerpt: '', content: '', imageUrl: '', imageBase64: '' };
+      elCustomTheme.value = '';
+      document.querySelectorAll('input[name="suggestion"]').forEach(r => r.checked = false);
+      setStep(1);
+      toast('Vamos criar outro post!');
+    });
+  </script>
+</body>
+</html>
