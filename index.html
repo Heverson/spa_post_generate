@@ -284,11 +284,11 @@
     const MOCK_MODE = false; // mude para false para usar APIs reais
     
     /* Etapa 1: sugestões (GET) */
-    const API_SUGGESTIONS = MOCK_MODE ? 'mock://suggestions' : 'https://primary-production-5b64.up.railway.app/webhook-test/post-ideias';
+    const API_SUGGESTIONS = MOCK_MODE ? 'mock://suggestions' : 'https://primary-production-5b64.up.railway.app/webhook/post-ideias';
     /* Etapa 2: gerar rascunho a partir do tema */
-    const API_GENERATE    = MOCK_MODE ? 'mock://generate' : 'https://primary-production-5b64.up.railway.app/webhook-test/post-generate';
+    const API_GENERATE    = MOCK_MODE ? 'mock://generate' : 'https://primary-production-5b64.up.railway.app/webhook/post-generate';
     /* Etapa 3: submeter/publicar no WP e retornar { postUrl } */
-    const API_SUBMIT      = MOCK_MODE ? 'mock://submit' : 'https://primary-production-5b64.up.railway.app/webhook-test/post-submit';
+    const API_SUBMIT      = MOCK_MODE ? 'mock://submit' : 'https://primary-production-5b64.up.railway.app/webhook/post-submit';
 
     const QUOTA_PER_WEEK = 2; // limite cliente
 
