@@ -217,6 +217,16 @@
                   </div>
                 </div>
 
+                <!-- Análise de SEO -->
+                <div id="seoAnalysisSection" class="hidden">
+                  <div class="space-y-2">
+                    <label class="block text-sm font-medium">Análise de SEO</label>
+                    <div id="seoAnalysisContent" class="rounded-xl border border-slate-200 p-4 bg-slate-50">
+                      <!-- Conteúdo será inserido via JavaScript -->
+                    </div>
+                  </div>
+                </div>
+
                 <!-- Ações -->
                 <div class="pt-2 flex items-center gap-3">
                   <button id="btnPublish" type="submit"
@@ -480,7 +490,9 @@
         description: { type: "string" },
         excerpt:     { type: "string" },
         content:     { type: "string" },
-        imageUrl:    { type: "string" }
+        image:       { type: "string" },
+        tags:        { type: "array" },
+        seoAnalysis: { type: "object" }
       },
       required: ["title", "content"],
       additionalProperties: false
@@ -509,7 +521,9 @@
         excerpt: '',
         content: '',
         imageUrl: '',
-        imageBase64: ''
+        imageBase64: '',
+        tags: [],
+        seoAnalysis: null
       },
       postUrl: ''
     };
@@ -858,7 +872,9 @@
         description: pick('description','desc','meta.description') || '',
         excerpt:     pick('excerpt','summary') || '',
         content:     pick('content','html','post.content') || `<p>Conteúdo gerado para <strong>${topic}</strong>.</p>`,
-        imageUrl:    pick('imageUrl','image','cover') || ''
+        image:       pick('image','imageUrl','cover') || '',
+        tags:        raw.tags || [],
+        seoAnalysis: raw.seoAnalysis || null
       };
     }
 
@@ -874,14 +890,90 @@
         elContent.value = state.draft.content || '';
       }
       
+      // Usar campo 'image' do webhook se disponível
+      const imageUrl = state.draft.image || state.draft.imageUrl || '';
       if (state.draft.imageBase64) {
         elImgPreview.src = state.draft.imageBase64;
       } else {
-        elImgPreview.src = state.draft.imageUrl || '';
+        elImgPreview.src = imageUrl;
       }
-      elImageUrl.value = state.draft.imageUrl || '';
+      elImageUrl.value = imageUrl;
+      
+      // Renderizar análise de SEO se disponível
+      renderSeoAnalysis();
+      
       updateContentPreview();
     }
+    
+    function renderSeoAnalysis() {
+      if (!state.draft.seoAnalysis) {
+        elSeoAnalysisSection.classList.add('hidden');
+        return;
+      }
+      
+      const seo = state.draft.seoAnalysis;
+      const scoreColor = seo.seoScore >= 90 ? 'text-emerald-600' : seo.seoScore >= 70 ? 'text-yellow-600' : 'text-red-600';
+      
+      elSeoAnalysisContent.innerHTML = `
+        <div class="space-y-4">
+          <!-- Score Principal -->
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-slate-800">Score SEO</h3>
+            <div class="flex items-center gap-2">
+              <span class="text-2xl font-bold ${scoreColor}">${seo.seoScore}</span>
+              <span class="text-xs text-slate-500">/100</span>
+            </div>
+          </div>
+          
+          <!-- Keywords -->
+          <div>
+            <h4 class="text-xs font-medium text-slate-700 mb-2">Palavras-chave</h4>
+            <div class="space-y-1">
+              <div class="text-xs">
+                <span class="font-medium text-slate-600">Principal:</span> 
+                <span class="text-brand-600">${seo.primaryKeyword}</span>
+              </div>
+              <div class="text-xs">
+                <span class="font-medium text-slate-600">Secundárias:</span> 
+                <span class="text-slate-600">${seo.secondaryKeywords.join(', ')}</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Densidade -->
+          <div class="text-xs">
+            <span class="font-medium text-slate-600">Densidade:</span> 
+            <span class="text-slate-600">${seo.keywordDensity}</span>
+          </div>
+          
+          <!-- Breakdown -->
+          <div>
+            <h4 class="text-xs font-medium text-slate-700 mb-2">Detalhamento</h4>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div class="flex justify-between">
+                <span class="text-slate-600">Otimização:</span>
+                <span class="font-medium">${seo.seoScoreBreakdown.keywordOptimization}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-600">Estrutura:</span>
+                <span class="font-medium">${seo.seoScoreBreakdown.contentStructure}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-600">Legibilidade:</span>
+                <span class="font-medium">${seo.seoScoreBreakdown.readability}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-600">Links:</span>
+                <span class="font-medium">${seo.seoScoreBreakdown.internalLinks}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      elSeoAnalysisSection.classList.remove('hidden');
+    }
+    
      function updateContentPreview() {
       // Obter conteúdo do Froala Editor se disponível, senão do textarea
       let html;
@@ -929,6 +1021,9 @@
     const elBtnApplyImage = document.getElementById('btnApplyImage');
     const elBtnPublish = document.getElementById('btnPublish');
     const elPubStatus = document.getElementById('pubStatus');
+
+    const elSeoAnalysisSection = document.getElementById('seoAnalysisSection');
+    const elSeoAnalysisContent = document.getElementById('seoAnalysisContent');
 
     const elFinalLink = document.getElementById('finalLink');
     const elBtnCopyLink = document.getElementById('btnCopyLink');
@@ -1021,8 +1116,11 @@
         state.draft.description = data.description || '';
         state.draft.excerpt = data.excerpt || '';
         state.draft.content = data.content;
+        state.draft.image = data.image || '';
         state.draft.imageUrl = data.imageUrl || '';
         state.draft.imageBase64 = '';
+        state.draft.tags = data.tags || [];
+        state.draft.seoAnalysis = data.seoAnalysis || null;
 
         renderDraftToForm();
         setStep(2);
