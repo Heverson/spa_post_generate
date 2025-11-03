@@ -867,13 +867,34 @@
         }
         return '';
       };
+      // Normalização de tags vindas mal formatadas
+      function normalizeTags(tagsRaw) {
+        try {
+          if (!tagsRaw) return [];
+          if (Array.isArray(tagsRaw)) {
+            // Ex.: ["importacao", "otimizacao", ...] quebrado em partes
+            const joined = tagsRaw.join('');
+            if (joined.trim().startsWith('[')) {
+              try { const parsed = JSON.parse(joined); return Array.isArray(parsed) ? parsed.map(x => String(x).trim()).filter(Boolean) : []; } catch {}
+            }
+            return tagsRaw.map(x => String(x).replace(/^\["?/, '').replace(/"?\]$/, '').replace(/^"|"$/g,'').trim()).filter(Boolean);
+          }
+          if (typeof tagsRaw === 'string') {
+            const s = tagsRaw.trim();
+            if (s.startsWith('[')) { try { const arr = JSON.parse(s); return Array.isArray(arr) ? arr.map(x => String(x).trim()).filter(Boolean) : []; } catch {} }
+            return s.split(',').map(x => x.replace(/^"|"$/g,'').trim()).filter(Boolean);
+          }
+          return [];
+        } catch { return []; }
+      }
+
       return {
         title:       pick('title','post.title','data.title') || `Post sobre: ${topic}`,
         description: pick('description','desc','meta.description') || '',
         excerpt:     pick('excerpt','summary') || '',
         content:     pick('content','html','post.content') || `<p>Conteúdo gerado para <strong>${topic}</strong>.</p>`,
         image:       pick('image','imageUrl','cover') || '',
-        tags:        raw.tags || [],
+        tags:        normalizeTags(raw.tags),
         seoAnalysis: raw.seoAnalysis || null
       };
     }
@@ -912,7 +933,13 @@
       }
       
       const seo = state.draft.seoAnalysis;
-      const scoreColor = seo.seoScore >= 90 ? 'text-emerald-600' : seo.seoScore >= 70 ? 'text-yellow-600' : 'text-red-600';
+      const score = typeof seo.seoScore === 'number' ? seo.seoScore : 0;
+      const scoreColor = score >= 90 ? 'text-emerald-600' : score >= 70 ? 'text-yellow-600' : 'text-red-600';
+      const primaryKeyword = seo.primaryKeyword || '';
+      const secondaryKeywords = Array.isArray(seo.secondaryKeywords) ? seo.secondaryKeywords : [];
+      const keywordDensity = seo.keywordDensity || '';
+      const breakdown = seo.seoScoreBreakdown || {};
+      const getB = (k) => (breakdown && breakdown[k] != null ? breakdown[k] : 0);
       
       elSeoAnalysisContent.innerHTML = `
         <div class="space-y-4">
@@ -920,7 +947,7 @@
           <div class="flex items-center justify-between">
             <h3 class="text-sm font-semibold text-slate-800">Score SEO</h3>
             <div class="flex items-center gap-2">
-              <span class="text-2xl font-bold ${scoreColor}">${seo.seoScore}</span>
+              <span class="text-2xl font-bold ${scoreColor}">${score}</span>
               <span class="text-xs text-slate-500">/100</span>
             </div>
           </div>
@@ -931,11 +958,11 @@
             <div class="space-y-1">
               <div class="text-xs">
                 <span class="font-medium text-slate-600">Principal:</span> 
-                <span class="text-brand-600">${seo.primaryKeyword}</span>
+                <span class="text-brand-600">${primaryKeyword}</span>
               </div>
               <div class="text-xs">
                 <span class="font-medium text-slate-600">Secundárias:</span> 
-                <span class="text-slate-600">${seo.secondaryKeywords.join(', ')}</span>
+                <span class="text-slate-600">${secondaryKeywords.join(', ')}</span>
               </div>
             </div>
           </div>
@@ -943,7 +970,7 @@
           <!-- Densidade -->
           <div class="text-xs">
             <span class="font-medium text-slate-600">Densidade:</span> 
-            <span class="text-slate-600">${seo.keywordDensity}</span>
+            <span class="text-slate-600">${keywordDensity}</span>
           </div>
           
           <!-- Breakdown -->
@@ -952,19 +979,19 @@
             <div class="grid grid-cols-2 gap-2 text-xs">
               <div class="flex justify-between">
                 <span class="text-slate-600">Otimização:</span>
-                <span class="font-medium">${seo.seoScoreBreakdown.keywordOptimization}</span>
+                <span class="font-medium">${getB('keywordOptimization')}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-slate-600">Estrutura:</span>
-                <span class="font-medium">${seo.seoScoreBreakdown.contentStructure}</span>
+                <span class="font-medium">${getB('contentStructure')}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-slate-600">Legibilidade:</span>
-                <span class="font-medium">${seo.seoScoreBreakdown.readability}</span>
+                <span class="font-medium">${getB('readability')}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-slate-600">Links:</span>
-                <span class="font-medium">${seo.seoScoreBreakdown.internalLinks}</span>
+                <span class="font-medium">${getB('internalLinks')}</span>
               </div>
             </div>
           </div>
@@ -1117,9 +1144,10 @@
         state.draft.excerpt = data.excerpt || '';
         state.draft.content = data.content;
         state.draft.image = data.image || '';
-        state.draft.imageUrl = data.imageUrl || '';
+        state.draft.imageUrl = data.imageUrl || data.image || '';
         state.draft.imageBase64 = '';
-        state.draft.tags = data.tags || [];
+        // normalizar tags se vierem mal formatadas
+        state.draft.tags = Array.isArray(data.tags) ? data.tags : (typeof data.tags === 'string' ? (function(s){ try { const arr = JSON.parse(s); return Array.isArray(arr)?arr: s.split(','); } catch { return s.split(','); } })(data.tags) : []);
         state.draft.seoAnalysis = data.seoAnalysis || null;
 
         renderDraftToForm();
@@ -1185,7 +1213,7 @@
         description: elDescription.value.trim(),
         excerpt: elExcerpt.value.trim(),
         content: content,
-        imageUrl: state.draft.imageUrl || '',
+        imageUrl: state.draft.imageUrl || state.draft.image || '',
         imageBase64: state.draft.imageBase64 || '',
         topic: state.topic,
         source: 'netlify-spa'
