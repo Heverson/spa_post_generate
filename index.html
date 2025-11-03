@@ -491,6 +491,7 @@
         excerpt:     { type: "string" },
         content:     { type: "string" },
         image:       { type: "string" },
+        imageId:     { type: "string" },
         tags:        { type: "array" },
         seoAnalysis: { type: "object" }
       },
@@ -518,12 +519,15 @@
       draft: {
         title: '',
         description: '',
+        metaDescription: '',
         excerpt: '',
         content: '',
         imageUrl: '',
         imageBase64: '',
+        imageId: '',
         tags: [],
-        seoAnalysis: null
+        seoAnalysis: null,
+        slug: ''
       },
       postUrl: ''
     };
@@ -856,7 +860,19 @@
     }
 
     function mapToGenerateShape(raw, topic) {
-      if (!raw || typeof raw !== 'object') {
+      if (!raw) {
+        return { title: `Post sobre: ${topic}`, content: `<p>Conteúdo gerado para <strong>${topic}</strong>.</p>` };
+      }
+      // Se vier como array, escolher o primeiro item que contenha content/title
+      if (Array.isArray(raw)) {
+        const candidate = raw.find(x => x && typeof x === 'object' && (x.content || x.title)) || raw[0];
+        if (candidate && typeof candidate === 'object') {
+          raw = candidate;
+        } else {
+          return { title: `Post sobre: ${topic}`, content: `<p>Conteúdo gerado para <strong>${topic}</strong>.</p>` };
+        }
+      }
+      if (typeof raw !== 'object') {
         return { title: `Post sobre: ${topic}`, content: `<p>Conteúdo gerado para <strong>${topic}</strong>.</p>` };
       }
       const get = (o, p) => p.split('.').reduce((x,k)=>x && x[k], raw);
@@ -890,12 +906,14 @@
 
       return {
         title:       pick('title','post.title','data.title') || `Post sobre: ${topic}`,
-        description: pick('description','desc','meta.description') || '',
+        description: pick('description','metaDescription','desc','meta.description') || '',
         excerpt:     pick('excerpt','summary') || '',
         content:     pick('content','html','post.content') || `<p>Conteúdo gerado para <strong>${topic}</strong>.</p>`,
         image:       pick('image','imageUrl','cover') || '',
+        imageId:     pick('imageId','image_id','image.id','id') || '',
         tags:        normalizeTags(raw.tags),
-        seoAnalysis: raw.seoAnalysis || null
+        seoAnalysis: raw.seoAnalysis || null,
+        slug:        pick('slug','post.slug') || ''
       };
     }
 
@@ -1140,15 +1158,18 @@
         const data = await requestDraftFromTheme(topic);
 
         state.draft.title = data.title;
-        state.draft.description = data.description || '';
+        state.draft.description = data.description || data.metaDescription || '';
+        state.draft.metaDescription = data.metaDescription || '';
         state.draft.excerpt = data.excerpt || '';
         state.draft.content = data.content;
         state.draft.image = data.image || '';
         state.draft.imageUrl = data.imageUrl || data.image || '';
         state.draft.imageBase64 = '';
+        state.draft.imageId = data.imageId || '';
         // normalizar tags se vierem mal formatadas
         state.draft.tags = Array.isArray(data.tags) ? data.tags : (typeof data.tags === 'string' ? (function(s){ try { const arr = JSON.parse(s); return Array.isArray(arr)?arr: s.split(','); } catch { return s.split(','); } })(data.tags) : []);
         state.draft.seoAnalysis = data.seoAnalysis || null;
+        state.draft.slug = data.slug || '';
 
         renderDraftToForm();
         setStep(2);
@@ -1215,9 +1236,25 @@
         content: content,
         imageUrl: state.draft.imageUrl || state.draft.image || '',
         imageBase64: state.draft.imageBase64 || '',
+        imageId: state.draft.imageId || '',
+        tags: Array.isArray(state.draft.tags) ? state.draft.tags : [],
+        slug: state.draft.slug || '',
+        metaDescription: state.draft.metaDescription || '',
+        seoAnalysis: state.draft.seoAnalysis || undefined,
         topic: state.topic,
         source: 'netlify-spa'
       };
+      // remover campos vazios do payload
+      Object.keys(payload).forEach((k) => {
+        const v = payload[k];
+        const isEmptyString = typeof v === 'string' && v.trim() === '';
+        const isEmptyArray = Array.isArray(v) && v.length === 0;
+        const isEmptyObject = (v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0);
+        const isNullish = v === null || v === undefined;
+        if (isEmptyString || isEmptyArray || isEmptyObject || isNullish) {
+          delete payload[k];
+        }
+      });
 
       if (!payload.title || !payload.content) {
         toast('Título e conteúdo são obrigatórios.');
